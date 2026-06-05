@@ -30,23 +30,16 @@ else()
 endif()
 
 add_executable(mt_demo
-    examples/demo.cpp
+    src/demo.cpp
 )
 
 target_link_libraries(mt_demo PRIVATE mt_scheduler)
 
 enable_testing()
 
-add_executable(thread_pool_tests
-    tests/thread_pool_tests.cpp
+add_executable(milestone2_tests
+    tests/milestone2_tests.cpp
 )
 
-target_link_libraries(thread_pool_tests PRIVATE mt_scheduler)
-add_test(NAME thread_pool_tests COMMAND thread_pool_tests)
-
-add_executable(scheduler_tests
-    tests/scheduler_tests.cpp
-)
-
-target_link_libraries(scheduler_tests PRIVATE mt_scheduler)
-add_test(NAME scheduler_tests COMMAND scheduler_tests)
+target_link_libraries(milestone2_tests PRIVATE mt_scheduler)
+add_test(NAME milestone2_tests COMMAND milestone2_tests)
