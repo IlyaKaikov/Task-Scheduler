@@ -12,10 +12,10 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_library(mt_scheduler
     include/blocking_queue.hpp
-    src/task_scheduler.cpp
     include/task_scheduler.hpp
-    src/thread_pool.cpp
     include/thread_pool.hpp
+    src/task_scheduler.cpp
+    src/thread_pool.cpp
 )
 
 target_include_directories(mt_scheduler

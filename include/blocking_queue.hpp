@@ -2,6 +2,8 @@
 
 #include <mutex>
 #include <optional>
+#include <queue>
+#include <utility>
 
 namespace mt {
 
@@ -15,12 +17,20 @@ public:
 
     void push(T value)
     {
-        (void)value;
+        const std::lock_guard lock{mutex_};
+        queue_.push(std::move(value));
     }
 
     [[nodiscard]] std::optional<T> wait_pop()
     {
-        return std::nullopt;
+        const std::lock_guard lock{mutex_};
+        if (queue_.empty()) {
+            return std::nullopt;
+        }
+
+        T value = std::move(queue_.front());
+        queue_.pop();
+        return value;
     }
 
     void close() noexcept
@@ -37,6 +47,7 @@ public:
 
 private:
     mutable std::mutex mutex_;
+    std::queue<T> queue_;
     bool closed_{false};
 };
 
