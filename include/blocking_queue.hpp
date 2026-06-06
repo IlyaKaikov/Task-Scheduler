@@ -4,6 +4,7 @@
 #include <mutex>
 #include <optional>
 #include <queue>
+#include <stdexcept>
 #include <utility>
 
 namespace mt {
@@ -20,6 +21,9 @@ public:
     {
         {
             const std::lock_guard lock{mutex_};
+            if (closed_) {
+                throw std::runtime_error{"cannot push to a closed BlockingQueue"};
+            }
             queue_.push(std::move(value));
         }
         condition_.notify_one();

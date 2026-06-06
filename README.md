@@ -6,18 +6,19 @@ The project will implement a fixed-size thread pool and a small task scheduler u
 
 ## Current Status
 
-Milestone 1 is the project skeleton:
+Completed:
 
-- CMake build setup
-- Library target
-- Demo executable
-- CTest test targets
-- Milestone documentation
+- Milestone 1: project skeleton, CMake build, demo target, CTest wiring, and milestone documentation
+- Milestone 2: thread-safe `BlockingQueue<T>` with FIFO push/pop, blocking waits, close wakeups, push rejection after close, move-only value support, and multi-producer/multi-consumer tests
+
+Next:
+
+- Milestone 3: fixed-size `ThreadPool` built on top of the blocking queue
 
 ## Build
 
 ```powershell
-cmake -S . -B build
+cmake --preset vs2022-x64
 cmake --build build
 ```
 
@@ -36,10 +37,10 @@ For single-configuration generators, the executable may be at:
 ## Test
 
 ```powershell
-ctest --test-dir build --output-on-failure
+ctest --preset debug
 ```
 
-With Visual Studio generators, include the configuration:
+Equivalent Visual Studio generator command:
 
 ```powershell
 ctest --test-dir build -C Debug --output-on-failure

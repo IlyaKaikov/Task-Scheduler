@@ -4,6 +4,8 @@
 #include <cassert>
 #include <chrono>
 #include <memory>
+#include <mutex>
+#include <stdexcept>
 #include <thread>
 #include <type_traits>
 #include <vector>
@@ -96,6 +98,161 @@ void test_wait_pop_blocks_until_push()
     assert(popped_value == 99);
 }
 
+void test_close_preserves_queued_items()
+{
+    mt::BlockingQueue<int> queue;
+    queue.push(10);
+    queue.push(20);
+    queue.close();
+
+    assert(queue.is_closed());
+    assert(queue.wait_pop() == 10);
+    assert(queue.wait_pop() == 20);
+    assert(!queue.wait_pop().has_value());
+}
+
+void test_close_wakes_all_waiters()
+{
+    constexpr int worker_count = 3;
+
+    mt::BlockingQueue<int> queue;
+    std::atomic_int waiting_count{0};
+    std::atomic_int completed_count{0};
+    std::atomic_int nullopt_count{0};
+    std::vector<std::jthread> workers;
+
+    workers.reserve(worker_count);
+    for (int index = 0; index < worker_count; ++index) {
+        workers.emplace_back([&] {
+            waiting_count.fetch_add(1);
+            auto value = queue.wait_pop();
+            if (!value.has_value()) {
+                nullopt_count.fetch_add(1);
+            }
+            completed_count.fetch_add(1);
+        });
+    }
+
+    while (waiting_count.load() != worker_count) {
+        std::this_thread::yield();
+    }
+
+    std::this_thread::sleep_for(50ms);
+    assert(completed_count.load() == 0);
+
+    queue.close();
+
+    for (auto& worker : workers) {
+        worker.join();
+    }
+
+    assert(completed_count.load() == worker_count);
+    assert(nullopt_count.load() == worker_count);
+}
+
+void test_close_is_idempotent()
+{
+    mt::BlockingQueue<int> queue;
+    queue.close();
+    queue.close();
+
+    assert(queue.is_closed());
+    assert(!queue.wait_pop().has_value());
+}
+
+void test_push_after_close_throws()
+{
+    mt::BlockingQueue<int> queue;
+    queue.close();
+
+    bool threw = false;
+    try {
+        queue.push(1);
+    } catch (const std::runtime_error&) {
+        threw = true;
+    }
+
+    assert(threw);
+    assert(!queue.wait_pop().has_value());
+}
+
+void test_push_after_draining_closed_queue_throws()
+{
+    mt::BlockingQueue<int> queue;
+    queue.push(1);
+    queue.close();
+
+    assert(queue.wait_pop() == 1);
+    assert(!queue.wait_pop().has_value());
+
+    bool threw = false;
+    try {
+        queue.push(2);
+    } catch (const std::runtime_error&) {
+        threw = true;
+    }
+
+    assert(threw);
+    assert(!queue.wait_pop().has_value());
+}
+
+void test_multi_producer_multi_consumer()
+{
+    constexpr int producer_count = 4;
+    constexpr int consumer_count = 3;
+    constexpr int values_per_producer = 100;
+    constexpr int total_values = producer_count * values_per_producer;
+
+    mt::BlockingQueue<int> queue;
+    std::vector<int> seen_counts(total_values, 0);
+    std::mutex seen_mutex;
+    std::atomic_int consumed_count{0};
+    std::vector<std::jthread> consumers;
+
+    consumers.reserve(consumer_count);
+    for (int index = 0; index < consumer_count; ++index) {
+        consumers.emplace_back([&] {
+            while (auto value = queue.wait_pop()) {
+                assert(*value >= 0);
+                assert(*value < total_values);
+
+                {
+                    const std::lock_guard lock{seen_mutex};
+                    ++seen_counts[*value];
+                }
+                consumed_count.fetch_add(1);
+            }
+        });
+    }
+
+    std::vector<std::jthread> producers;
+    producers.reserve(producer_count);
+    for (int producer = 0; producer < producer_count; ++producer) {
+        producers.emplace_back([&, producer] {
+            const int start = producer * values_per_producer;
+            const int end = start + values_per_producer;
+            for (int value = start; value < end; ++value) {
+                queue.push(value);
+            }
+        });
+    }
+
+    for (auto& producer : producers) {
+        producer.join();
+    }
+
+    queue.close();
+
+    for (auto& consumer : consumers) {
+        consumer.join();
+    }
+
+    assert(consumed_count.load() == total_values);
+    for (int count : seen_counts) {
+        assert(count == 1);
+    }
+}
+
 } // namespace
 
 int main()
@@ -105,6 +262,12 @@ int main()
     test_batch_drain();
     test_move_only_values();
     test_wait_pop_blocks_until_push();
+    test_close_preserves_queued_items();
+    test_close_wakes_all_waiters();
+    test_close_is_idempotent();
+    test_push_after_close_throws();
+    test_push_after_draining_closed_queue_throws();
+    test_multi_producer_multi_consumer();
 
     return 0;
 }
