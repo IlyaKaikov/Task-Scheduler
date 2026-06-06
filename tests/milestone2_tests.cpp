@@ -1,9 +1,14 @@
 #include "blocking_queue.hpp"
 
+#include <atomic>
 #include <cassert>
+#include <chrono>
 #include <memory>
+#include <thread>
 #include <type_traits>
 #include <vector>
+
+using namespace std::chrono_literals;
 
 namespace {
 
@@ -17,9 +22,9 @@ void test_blocking_queue_api()
     int_queue.push(42);
     assert(!int_queue.is_closed());
     assert(int_queue.wait_pop() == 42);
-    assert(!int_queue.wait_pop().has_value());
     int_queue.close();
     assert(int_queue.is_closed());
+    assert(!int_queue.wait_pop().has_value());
 }
 
 void test_fifo_ordering()
@@ -31,6 +36,7 @@ void test_fifo_ordering()
     assert(fifo_queue.wait_pop() == 1);
     assert(fifo_queue.wait_pop() == 2);
     assert(fifo_queue.wait_pop() == 3);
+    fifo_queue.close();
     assert(!fifo_queue.wait_pop().has_value());
 }
 
@@ -40,6 +46,7 @@ void test_batch_drain()
     for (int value = 0; value < 5; ++value) {
         batch_queue.push(value);
     }
+    batch_queue.close();
 
     std::vector<int> drained;
     while (auto value = batch_queue.wait_pop()) {
@@ -56,7 +63,37 @@ void test_move_only_values()
     auto moved_value = move_only_queue.wait_pop();
     assert(moved_value.has_value());
     assert(**moved_value == 7);
+    move_only_queue.close();
     assert(!move_only_queue.wait_pop().has_value());
+}
+
+void test_wait_pop_blocks_until_push()
+{
+    mt::BlockingQueue<int> queue;
+    std::atomic_bool waiting{false};
+    std::atomic_bool completed{false};
+    int popped_value = 0;
+
+    std::jthread worker{[&] {
+        waiting.store(true);
+        auto value = queue.wait_pop();
+        assert(value.has_value());
+        popped_value = *value;
+        completed.store(true);
+    }};
+
+    while (!waiting.load()) {
+        std::this_thread::yield();
+    }
+
+    std::this_thread::sleep_for(50ms);
+    assert(!completed.load());
+
+    queue.push(99);
+    worker.join();
+
+    assert(completed.load());
+    assert(popped_value == 99);
 }
 
 } // namespace
@@ -67,6 +104,7 @@ int main()
     test_fifo_ordering();
     test_batch_drain();
     test_move_only_values();
+    test_wait_pop_blocks_until_push();
 
     return 0;
 }
