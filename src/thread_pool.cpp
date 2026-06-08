@@ -11,7 +11,10 @@ ThreadPool::ThreadPool(std::size_t worker_count)
     for (std::size_t index = 0; index < worker_count_; ++index) {
         workers_.emplace_back([this] {
             while (auto task = tasks_.wait_pop()) {
-                (*task)();
+                try {
+                    (*task)();
+                } catch (...) {
+                }
             }
         });
     }

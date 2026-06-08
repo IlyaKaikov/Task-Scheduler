@@ -11,10 +11,11 @@ Completed:
 - Milestone 1: project skeleton, CMake build, demo target, CTest wiring, and milestone documentation
 - Milestone 2: thread-safe `BlockingQueue<T>` with FIFO push/pop, blocking waits, close wakeups, push rejection after close, move-only value support, and multi-producer/multi-consumer tests
 - Milestone 3: fixed-size `ThreadPool` with worker startup, `void` task submission, worker-thread execution, graceful shutdown, post-shutdown rejection, destructor joining, and focused milestone tests
+- Milestone 4: thread pool robustness with caught task exceptions, idempotent shutdown, state queries, and `docs/design.md`
 
 Next:
 
-- Milestone 4: thread pool robustness, exception handling policy, and design documentation
+- Milestone 5: basic delayed task scheduler
 
 ## Build
 

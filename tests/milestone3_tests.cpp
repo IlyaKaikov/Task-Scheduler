@@ -207,6 +207,24 @@ void test_destructor_drains_work_and_joins()
     assert(completed_count.load() == task_count);
 }
 
+void test_throwing_task_does_not_stop_later_tasks()
+{
+    mt::ThreadPool pool{1};
+    std::atomic_int completed_count{0};
+
+    pool.submit([] {
+        throw std::runtime_error{"intentional test exception"};
+    });
+    pool.submit([&] {
+        completed_count.fetch_add(1);
+    });
+
+    assert(wait_until_equal(completed_count, 1));
+
+    pool.shutdown();
+    assert(completed_count.load() == 1);
+}
+
 } // namespace
 
 int main()
@@ -218,6 +236,7 @@ int main()
     test_shutdown_drains_queued_work_before_returning();
     test_destructor_handles_idle_workers();
     test_destructor_drains_work_and_joins();
+    test_throwing_task_does_not_stop_later_tasks();
 
     return 0;
 }
