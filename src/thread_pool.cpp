@@ -28,7 +28,11 @@ void ThreadPool::submit(std::function<void()> task)
         throw std::runtime_error{"cannot submit task to a shutdown ThreadPool"};
     }
 
-    tasks_.push(std::move(task));
+    try {
+        tasks_.push(std::move(task));
+    } catch (const std::runtime_error&) {
+        throw std::runtime_error{"cannot submit task to a shutdown ThreadPool"};
+    }
 }
 
 void ThreadPool::shutdown()
