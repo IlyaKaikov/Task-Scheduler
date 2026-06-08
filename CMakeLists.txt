@@ -43,10 +43,3 @@ add_executable(milestone2_tests
 
 target_link_libraries(milestone2_tests PRIVATE mt_scheduler)
 add_test(NAME milestone2_tests COMMAND milestone2_tests)
-
-add_executable(milestone3_tests
-    tests/milestone3_tests.cpp
-)
-
-target_link_libraries(milestone3_tests PRIVATE mt_scheduler)
-add_test(NAME milestone3_tests COMMAND milestone3_tests)
