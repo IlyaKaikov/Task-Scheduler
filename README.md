@@ -2,7 +2,7 @@
 
 A focused modern C++20 project for demonstrating multithreading fundamentals.
 
-The project will implement a fixed-size thread pool and a small task scheduler using standard C++ concurrency primitives. The emphasis is correctness, clear shutdown semantics, futures, synchronization, cancellation.
+The project will implement a fixed-size thread pool and a small task scheduler using standard C++ concurrency primitives. The emphasis is correctness, clear shutdown semantics, synchronization, delayed execution, and cancellation.
 
 ## Current Status
 
