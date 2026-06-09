@@ -50,3 +50,10 @@ add_executable(milestone3_tests
 
 target_link_libraries(milestone3_tests PRIVATE mt_scheduler)
 add_test(NAME milestone3_tests COMMAND milestone3_tests)
+
+add_executable(milestone5_tests
+    tests/milestone5_tests.cpp
+)
+
+target_link_libraries(milestone5_tests PRIVATE mt_scheduler)
+add_test(NAME milestone5_tests COMMAND milestone5_tests)
