@@ -44,6 +44,11 @@ void TaskScheduler::shutdown()
         return;
     }
 
+    {
+        const std::lock_guard lock{mutex_};
+        scheduled_tasks_ = {};
+    }
+
     coordinator_.request_stop();
     condition_.notify_all();
     coordinator_.join();
@@ -88,19 +93,23 @@ void TaskScheduler::coordinator_loop(std::stop_token stop_token)
             continue;
         }
 
-        if (stop_token.stop_requested() || shutdown_started_.load() || scheduled_tasks_.empty()) {
-            continue;
-        }
+        auto now = std::chrono::steady_clock::now();
+        while (!stop_token.stop_requested()
+            && !shutdown_started_.load()
+            && !scheduled_tasks_.empty()
+            && scheduled_tasks_.top().due_time <= now) {
+            auto scheduled_task = scheduled_tasks_.top();
+            scheduled_tasks_.pop();
 
-        auto scheduled_task = scheduled_tasks_.top();
-        scheduled_tasks_.pop();
+            lock.unlock();
+            try {
+                pool_.submit(std::move(scheduled_task.task));
+            } catch (...) {
+            }
+            lock.lock();
 
-        lock.unlock();
-        try {
-            pool_.submit(std::move(scheduled_task.task));
-        } catch (...) {
+            now = std::chrono::steady_clock::now();
         }
-        lock.lock();
     }
 }
 

@@ -12,10 +12,11 @@ Completed:
 - Milestone 2: thread-safe `BlockingQueue<T>` with FIFO push/pop, blocking waits, close wakeups, push rejection after close, move-only value support, and multi-producer/multi-consumer tests
 - Milestone 3: fixed-size `ThreadPool` with worker startup, `void` task submission, worker-thread execution, graceful shutdown, post-shutdown rejection, destructor joining, and focused milestone tests
 - Milestone 4: thread pool robustness with caught task exceptions, idempotent shutdown, state queries, and `docs/design.md`
+- Milestone 5: basic `TaskScheduler` with delayed `void` task scheduling, due-time ordering, coordinator wakeups, clean scheduler shutdown, and focused milestone tests
 
 Next:
 
-- Milestone 5: basic delayed task scheduler
+- Milestone 6: cancellation, demo, and resume polish
 
 ## Build
 
