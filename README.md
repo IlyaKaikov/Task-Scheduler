@@ -1,22 +1,20 @@
-# MultiThreadScheduler
+# Multithreaded Scheduler
 
 A focused modern C++20 project for demonstrating multithreading fundamentals.
 
 The project implements a fixed-size thread pool and a small task scheduler using standard C++ concurrency primitives. The emphasis is correctness, clear shutdown semantics, synchronization, delayed execution, and cancellation.
 
-## Current Status
+## Implemented:
 
-Completed:
-
-- Milestone 1: project skeleton, CMake build, demo target, CTest wiring, and milestone documentation
+- Milestone 1: project skeleton and CMake build
 - Milestone 2: thread-safe `BlockingQueue<T>` with FIFO push/pop, blocking waits, close wakeups, push rejection after close, move-only value support, and multi-producer/multi-consumer tests
-- Milestone 3: fixed-size `ThreadPool` with worker startup, `void` task submission, worker-thread execution, graceful shutdown, post-shutdown rejection, destructor joining, and focused milestone tests
-- Milestone 4: thread pool robustness with caught task exceptions, idempotent shutdown, state queries, and `docs/design.md`
-- Milestone 5: basic `TaskScheduler` with delayed `void` task scheduling, due-time ordering, coordinator wakeups, clean scheduler shutdown, and focused milestone tests
-- Milestone 6: scheduled task cancellation, end-to-end demo behavior, and final documentation polish
+- Milestone 3: fixed-size `ThreadPool` with worker startup, `void` task submission, worker-thread execution, graceful shutdown, post-shutdown rejection and destructor joining
+- Milestone 4: thread pool robustness with caught task exceptions, idempotent shutdown and state queries
+- Milestone 5: basic `TaskScheduler` with delayed `void` task scheduling, due-time ordering, coordinator wakeups and clean scheduler shutdown
+- Milestone 6: scheduled task cancellation, demo behavior
 
 
-## What This Demonstrates
+## The project demonstrates:
 
 - Owning and joining worker threads with `std::jthread`
 - Coordinating producers and consumers with mutexes and condition variables
