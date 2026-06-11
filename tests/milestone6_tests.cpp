@@ -4,6 +4,8 @@
 #include <atomic>
 #include <cassert>
 #include <chrono>
+#include <condition_variable>
+#include <mutex>
 #include <thread>
 #include <type_traits>
 
@@ -148,6 +150,74 @@ void test_cancel_is_idempotent()
     pool.shutdown();
 }
 
+void test_cancel_after_dispatch_has_no_effect()
+{
+    mt::ThreadPool pool{1};
+    mt::TaskScheduler scheduler{pool};
+    std::atomic_bool scheduled_task_ran{false};
+    std::mutex gate_mutex;
+    std::condition_variable gate_condition;
+    bool gate_open = false;
+
+    pool.submit([&] {
+        std::unique_lock lock{gate_mutex};
+        gate_condition.wait(lock, [&] {
+            return gate_open;
+        });
+    });
+
+    auto handle = scheduler.schedule_after(0ms, [&] {
+        scheduled_task_ran.store(true);
+    });
+
+    std::this_thread::sleep_for(50ms);
+    handle.cancel();
+    assert(handle.is_cancelled());
+
+    {
+        const std::lock_guard lock{gate_mutex};
+        gate_open = true;
+    }
+    gate_condition.notify_one();
+
+    assert(wait_until_true(scheduled_task_ran));
+
+    scheduler.shutdown();
+    pool.shutdown();
+}
+
+void test_scheduler_shutdown_does_not_dispatch_pending_tasks()
+{
+    mt::ThreadPool pool{1};
+    mt::TaskScheduler scheduler{pool};
+    std::atomic_bool ran{false};
+
+    scheduler.schedule_after(5s, [&] {
+        ran.store(true);
+    });
+
+    scheduler.shutdown();
+    std::this_thread::sleep_for(50ms);
+
+    assert(!ran.load());
+
+    pool.shutdown();
+}
+
+void test_scheduler_handles_stopped_pool_without_crashing()
+{
+    mt::ThreadPool pool{1};
+    mt::TaskScheduler scheduler{pool};
+
+    pool.shutdown();
+
+    scheduler.schedule_after(0ms, [] {});
+    std::this_thread::sleep_for(50ms);
+
+    scheduler.shutdown();
+    assert(scheduler.is_shutdown());
+}
+
 } // namespace
 
 int main()
@@ -159,6 +229,9 @@ int main()
     test_cancel_before_dispatch_prevents_task_running();
     test_cancelling_one_task_does_not_cancel_other_tasks();
     test_cancel_is_idempotent();
+    test_cancel_after_dispatch_has_no_effect();
+    test_scheduler_shutdown_does_not_dispatch_pending_tasks();
+    test_scheduler_handles_stopped_pool_without_crashing();
 
     return 0;
 }

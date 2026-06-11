@@ -2,7 +2,7 @@
 
 A focused modern C++20 project for demonstrating multithreading fundamentals.
 
-The project will implement a fixed-size thread pool and a small task scheduler using standard C++ concurrency primitives. The emphasis is correctness, clear shutdown semantics, synchronization, delayed execution, and cancellation.
+The project implements a fixed-size thread pool and a small task scheduler using standard C++ concurrency primitives. The emphasis is correctness, clear shutdown semantics, synchronization, delayed execution, and cancellation.
 
 ## Current Status
 
@@ -13,10 +13,17 @@ Completed:
 - Milestone 3: fixed-size `ThreadPool` with worker startup, `void` task submission, worker-thread execution, graceful shutdown, post-shutdown rejection, destructor joining, and focused milestone tests
 - Milestone 4: thread pool robustness with caught task exceptions, idempotent shutdown, state queries, and `docs/design.md`
 - Milestone 5: basic `TaskScheduler` with delayed `void` task scheduling, due-time ordering, coordinator wakeups, clean scheduler shutdown, and focused milestone tests
+- Milestone 6: scheduled task cancellation, end-to-end demo behavior, and final documentation polish
 
-Next:
 
-- Milestone 6: cancellation, demo, and resume polish
+## What This Demonstrates
+
+- Owning and joining worker threads with `std::jthread`
+- Coordinating producers and consumers with mutexes and condition variables
+- Graceful shutdown that drains queued pool work
+- Delayed scheduling with one coordinator thread and due-time ordering
+- Best-effort cancellation for tasks that have not yet been dispatched
+- Exception containment inside worker threads so one throwing task does not stop the pool
 
 ## Build
 

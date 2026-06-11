@@ -133,6 +133,8 @@ void TaskScheduler::coordinator_loop(std::stop_token stop_token)
                 continue;
             }
 
+            scheduled_task.state->dispatched.store(true);
+
             lock.unlock();
             try {
                 pool_.submit(std::move(scheduled_task.task));
