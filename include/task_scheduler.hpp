@@ -7,12 +7,37 @@
 #include <condition_variable>
 #include <cstddef>
 #include <functional>
+#include <memory>
 #include <mutex>
 #include <queue>
 #include <thread>
 #include <vector>
 
 namespace mt {
+
+namespace detail {
+struct ScheduledTaskState;
+}
+
+class ScheduledTaskHandle {
+public:
+    ScheduledTaskHandle() = default;
+
+    ScheduledTaskHandle(const ScheduledTaskHandle&) = delete;
+    ScheduledTaskHandle& operator=(const ScheduledTaskHandle&) = delete;
+    ScheduledTaskHandle(ScheduledTaskHandle&&) noexcept = default;
+    ScheduledTaskHandle& operator=(ScheduledTaskHandle&&) noexcept = default;
+
+    void cancel() noexcept;
+    [[nodiscard]] bool is_cancelled() const noexcept;
+
+private:
+    friend class TaskScheduler;
+
+    explicit ScheduledTaskHandle(std::shared_ptr<detail::ScheduledTaskState> state);
+
+    std::shared_ptr<detail::ScheduledTaskState> state_;
+};
 
 class TaskScheduler {
 public:
@@ -24,7 +49,7 @@ public:
     TaskScheduler(TaskScheduler&&) = delete;
     TaskScheduler& operator=(TaskScheduler&&) = delete;
 
-    void schedule_after(std::chrono::steady_clock::duration delay, std::function<void()> task);
+    ScheduledTaskHandle schedule_after(std::chrono::steady_clock::duration delay, std::function<void()> task);
     void shutdown();
 
     [[nodiscard]] bool is_shutdown() const noexcept;
@@ -33,6 +58,7 @@ private:
     struct ScheduledTask {
         std::chrono::steady_clock::time_point due_time;
         std::size_t sequence;
+        std::shared_ptr<detail::ScheduledTaskState> state;
         std::function<void()> task;
     };
 

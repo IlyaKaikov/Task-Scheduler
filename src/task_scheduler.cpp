@@ -6,6 +6,30 @@
 
 namespace mt {
 
+namespace detail {
+struct ScheduledTaskState {
+    std::atomic_bool cancelled{false};
+    std::atomic_bool dispatched{false};
+};
+} // namespace detail
+
+ScheduledTaskHandle::ScheduledTaskHandle(std::shared_ptr<detail::ScheduledTaskState> state)
+    : state_(std::move(state))
+{
+}
+
+void ScheduledTaskHandle::cancel() noexcept
+{
+    if (state_) {
+        state_->cancelled.store(true);
+    }
+}
+
+bool ScheduledTaskHandle::is_cancelled() const noexcept
+{
+    return state_ && state_->cancelled.load();
+}
+
 TaskScheduler::TaskScheduler(ThreadPool& pool)
     : pool_(pool)
     , coordinator_([this](std::stop_token stop_token) {
@@ -19,8 +43,10 @@ TaskScheduler::~TaskScheduler()
     shutdown();
 }
 
-void TaskScheduler::schedule_after(std::chrono::steady_clock::duration delay, std::function<void()> task)
+ScheduledTaskHandle TaskScheduler::schedule_after(std::chrono::steady_clock::duration delay, std::function<void()> task)
 {
+    auto state = std::make_shared<detail::ScheduledTaskState>();
+
     {
         const std::lock_guard lock{mutex_};
         if (is_shutdown()) {
@@ -30,11 +56,13 @@ void TaskScheduler::schedule_after(std::chrono::steady_clock::duration delay, st
         scheduled_tasks_.push(ScheduledTask{
             std::chrono::steady_clock::now() + delay,
             next_sequence_++,
+            state,
             std::move(task),
         });
     }
 
     condition_.notify_one();
+    return ScheduledTaskHandle{std::move(state)};
 }
 
 void TaskScheduler::shutdown()
@@ -100,6 +128,10 @@ void TaskScheduler::coordinator_loop(std::stop_token stop_token)
             && scheduled_tasks_.top().due_time <= now) {
             auto scheduled_task = scheduled_tasks_.top();
             scheduled_tasks_.pop();
+
+            if (scheduled_task.state->cancelled.load()) {
+                continue;
+            }
 
             lock.unlock();
             try {
